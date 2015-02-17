@@ -1,0 +1,108 @@
+<html>
+<head>
+	<script src="d3.v3.min.js"></script>
+
+	<style>
+		path{ stroke: #ccc; }
+		#year{ text-align: center; width: 600px; font: 24px 'Helvetica Neue', Arial;}
+		#year.play{ width: 100px; margin-left: 250px; background-color: #eee; border: 1px solid #999; cursor: pointer;}
+	</style>
+</head>
+<body>
+	<script>
+
+var width = 600,
+	height = 400;
+
+var svg = d3.select( "body" )
+	.append( "svg" )
+	.attr( "class", "YlGnBu" )
+	.attr( "width", width )
+	.attr( "height", height );
+
+var states = svg.append( "g" )
+	.attr( "id", "states" );
+
+var projection = d3.geo.albersUsa()
+    .scale(800)
+    .translate([width / 2, height / 2]);
+
+var path = d3.geo.path()
+	.projection( projection );
+
+var rep = "#e66";
+var dem = "#66e";
+
+var duration = 2000;
+
+var minYear = 2000,
+	maxYear = 2012,
+	currentYear = 2000;
+
+var animationInterval;
+
+d3.select( "body" )
+	.append( "p" )
+	.attr( "id", "year" )
+	.attr( "class", "play" );
+
+d3.json( "states_election.geojson", function(json){
+	states.selectAll( "path" )
+		.data( json.features )
+		.enter()
+		.append( "path" )
+		.attr( "d", path );
+	nextFrame();
+	d3.select( "#year" )
+		.text( "Play" )
+		.classed( "play", true )
+		.on( "click", function(){
+			if ( d3.select(this).classed( "play" ) ){
+				currentYear = minYear;
+				nextFrame();
+				play();
+				d3.select( this )
+					.classed( "play", false )
+					.text( currentYear-4 );
+			}
+		})
+	//Play();
+});
+
+function updateChoropleth( fieldName, tween ){
+	states.selectAll( "path" )
+		.transition()
+		.ease( "linear" )
+		.duration( tween ? duration/2 : 0 )
+		.attrTween( "fill", function(d,i,a){
+			var end = d.properties[fieldName] == "R" ? rep : dem;
+			return d3.interpolateLab(a,end);
+		});
+	d3.select( "p" ).text( currentYear );
+}
+function play(){
+	animationInterval = setInterval( nextFrame, duration );
+}
+function nextFrame(){
+	if ( currentYear < minYear ){
+		currentYear+=4;
+		return;
+	}
+	updateChoropleth( "elect"+currentYear, currentYear != minYear );
+	currentYear+=4;
+	if ( currentYear > maxYear ) {
+		pause();
+		currentYear = minYear;
+		setTimeout( function(){
+			d3.select( "#year" )
+				.classed( "play", true )
+				.text( "Repeat" )
+		},duration);
+	}
+}
+function pause(){
+	clearInterval(animationInterval);
+}
+	</script>
+</body>
+</html>
